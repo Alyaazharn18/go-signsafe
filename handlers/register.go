@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"ewallet-backend/db"
-
-	"github.com/google/uuid"
 )
 
 type RegisterRequest struct {
@@ -20,7 +18,7 @@ type RegisterRequest struct {
 }
 
 type UserResponse struct {
-	ID        string    `json:"id"`
+	ID        int       `json:"id"`
 	Name      string    `json:"name"`
 	PublicKey string    `json:"public_key"`
 	Balance   float64   `json:"balance"`
@@ -68,14 +66,22 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newUUID := uuid.New().String()
 	currentTime := time.Now()
 	initialBalance := 0.00
 
-	_, err = tx.Exec(`
-			INSERT INTO users (id, name, public_key, balance, created_at)
-			VALUES ($1, $2, $3, $4, $5)
-		`, newUUID, req.Name, req.PublicKey, initialBalance, currentTime)
+	var insertedUser UserResponse // struct User sesuai dengan kolom tabel users
+
+	err = tx.QueryRow(`
+	INSERT INTO users (name, public_key, balance, created_at)
+	VALUES ($1, $2, $3, $4)
+	RETURNING id, name, public_key, balance, created_at
+`, req.Name, req.PublicKey, initialBalance, currentTime).Scan(
+		&insertedUser.ID,
+		&insertedUser.Name,
+		&insertedUser.PublicKey,
+		&insertedUser.Balance,
+		&insertedUser.CreatedAt,
+	)
 	if err != nil {
 		http.Error(w, "User already exists or database error", http.StatusInternalServerError)
 		return
@@ -86,20 +92,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userResponse := UserResponse{
-		ID:        newUUID,
-		Name:      req.Name,
-		PublicKey: req.PublicKey,
-		Balance:   initialBalance,
-		CreatedAt: currentTime,
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	if encodeErr := json.NewEncoder(w).Encode(userResponse); encodeErr != nil {
-		log.Printf("Error encoding user response for user '%s': %v", newUUID, encodeErr)
+	if encodeErr := json.NewEncoder(w).Encode(insertedUser); encodeErr != nil {
+		log.Printf("Error encoding user response for user '%d': %v", insertedUser.ID, encodeErr)
 	}
 
-	log.Printf("User '%s' registered successfully with ID: %s. Response sent.", req.Name, newUUID)
+	log.Printf("User '%s' registered successfully with ID: %d. Response sent.", req.Name, insertedUser.ID)
 }

@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"ewallet-backend/auth"
 	"ewallet-backend/db"
@@ -10,11 +11,13 @@ import (
 )
 
 func TransferHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodPost {
+	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	fromUserID := auth.GetUserID(r)
+
+	convUserID, _ := strconv.Atoi(fromUserID)
 
 	var req model.TransferRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -27,7 +30,7 @@ func TransferHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.ToUserID == fromUserID {
+	if req.ToUserID == convUserID {
 		http.Error(w, "cannot transfer to yourself", http.StatusBadRequest)
 		return
 	}
@@ -44,7 +47,7 @@ func TransferHandler(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	var fromBalance float64
-	err = tx.QueryRow("SELECT balance FROM users WHERE id = $1 FOR UPDATE", fromUserID).Scan(&fromBalance)
+	err = tx.QueryRow("SELECT balance FROM users WHERE id = $1 FOR UPDATE", convUserID).Scan(&fromBalance)
 	if err != nil {
 		http.Error(w, "sender not found", http.StatusNotFound)
 		return

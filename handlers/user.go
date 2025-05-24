@@ -12,7 +12,7 @@ import (
 )
 
 type UserData struct {
-	ID        string       `json:"id"`
+	ID        int       `json:"id"`
 	Name      string    `json:"name"`
 	Balance   float64   `json:"balance"`
 	PublicKey string    `json:"public_key"`
@@ -52,7 +52,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var user UserData
 		if err := rows.Scan(&user.ID, &user.Name, &user.Balance, &user.PublicKey, &user.CreatedAt); err != nil {
-			http.Error(w, "Error scanning user " + err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Error scanning user "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		users = append(users, user)

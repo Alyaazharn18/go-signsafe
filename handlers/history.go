@@ -13,7 +13,7 @@ type HistoryEntry struct {
 	ID           int     `json:"id"`
 	Type         string  `json:"type"`
 	Amount       float64 `json:"amount"`
-	ToUserID     *string `json:"to_user_id,omitempty"`
+	ToUserID     *int    `json:"to_user_id,omitempty"`
 	Timestamp    string  `json:"timestamp"`
 	Nonce        string  `json:"nonce"`
 	Signature    string  `json:"signature"`
@@ -64,7 +64,9 @@ func HistoryHandler(w http.ResponseWriter, r *http.Request) {
     LIMIT %d
     `, limit)
 
-	rows, err := db.Query(query, userID)
+	cnvUserID, _ := strconv.Atoi(userID)
+
+	rows, err := db.Query(query, cnvUserID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
